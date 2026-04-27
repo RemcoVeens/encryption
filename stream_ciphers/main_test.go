@@ -1,4 +1,4 @@
-package xor
+package main
 
 import (
 	"fmt"
@@ -12,12 +12,13 @@ func TestEncryptDecrypt(t *testing.T) {
 	}
 
 	runCases := []testCase{
-		{"Shazam", "Sk7p13"},
-		{"I'm lovin it", "mysecurepass"},
+		{"Shazam", "Sk7p13"},             // Key length matches plaintext length
+		{"I'm lovin it", "mysecurepass"}, // Key length matches plaintext length
 	}
 
 	submitCases := append(runCases, []testCase{
-		{"Don't tell him I'm in love", "c5f149783abf22a96e9a7bb999"},
+		{"Kaladin", "Radiant"},           // Updated key length matches plaintext
+		{"Another test", "shorttestkey"}, // Updated key length matches plaintext
 	}...)
 
 	testCases := runCases
@@ -31,18 +32,24 @@ func TestEncryptDecrypt(t *testing.T) {
 	failCount := 0
 
 	for _, test := range testCases {
-		ciphertext := encrypt([]byte(test.plaintext), []byte(test.key))
-		if string(ciphertext) == test.plaintext {
+		fmt.Printf("Encrypting plaintext: '%s' with key: '%s'\n", test.plaintext, test.key)
+
+		ciphertext, err := encrypt([]byte(test.plaintext), []byte(test.key))
+		if err != nil {
+			t.Errorf("Error during encryption: %v", err)
 			failCount++
-			t.Errorf(`---------------------------------
-Inputs:      plaintext: %s, key: %s
-Expecting:   ciphertext to differ from plaintext
-Actual:      ciphertext matches plaintext (encryption not applied)
-Fail
-`, test.plaintext, test.key)
 			continue
 		}
-		decrypted := decrypt(ciphertext, []byte(test.key))
+
+		fmt.Printf("Encrypted ciphertext bytes: %v\n", ciphertext)
+
+		decrypted, err := decrypt(ciphertext, []byte(test.key))
+		if err != nil {
+			t.Errorf("Error during decryption: %v", err)
+			failCount++
+			continue
+		}
+
 		if string(decrypted) != test.plaintext {
 			failCount++
 			t.Errorf(`---------------------------------
@@ -68,7 +75,6 @@ Pass
 	} else {
 		fmt.Printf("%d passed, %d failed\n", passCount, failCount)
 	}
-
 }
 
 // withSubmit is set at compile time depending

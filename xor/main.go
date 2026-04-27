@@ -1,4 +1,4 @@
-package main
+package xor
 
 func crypt(plaintext, key []byte) []byte {
 	res := make([]byte, len(plaintext))
