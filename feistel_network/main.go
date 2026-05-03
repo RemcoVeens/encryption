@@ -1,7 +1,11 @@
 package main
 
 import (
+	"crypto/cipher"
+	"crypto/des"
 	"crypto/sha256"
+	"errors"
+	"math/rand"
 )
 
 func reverse[T any](s []T) []T {
@@ -37,4 +41,54 @@ func feistel(msg []byte, roundKeys [][]byte) []byte {
 		rhs = nextRHS
 	}
 	return append(rhs, lhs...)
+}
+
+func decrypt(key, ciphertext []byte) ([]byte, error) {
+	block, err := des.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	if len(ciphertext) < des.BlockSize {
+		return nil, errors.New("ciphertext too short")
+	}
+	iv := ciphertext[:des.BlockSize]
+	ciphertext = ciphertext[des.BlockSize:]
+	if len(ciphertext)%des.BlockSize != 0 {
+		return nil, errors.New("ciphertext is not a multiple of the block size")
+	}
+	mode := cipher.NewCBCDecrypter(block, iv)
+	mode.CryptBlocks(ciphertext, ciphertext)
+	return ciphertext, nil
+}
+
+func padWithZeros(block []byte, desiredSize int) []byte {
+	for len(block) < desiredSize {
+		block = append(block, 0)
+	}
+	return block
+}
+func encrypt(key, plaintext []byte) ([]byte, error) {
+	cBlock, err := des.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	plaintext = padMsg(plaintext, des.BlockSize)
+	iv := make([]byte, des.BlockSize)
+	ciphertext := make([]byte, len(plaintext))
+	mode := cipher.NewCBCEncrypter(cBlock, iv)
+	mode.CryptBlocks(ciphertext, plaintext)
+	return append(iv, ciphertext...), nil
+}
+
+func padMsg(plaintext []byte, blockSize int) []byte {
+	if len(plaintext)%blockSize == 0 {
+		return plaintext
+	}
+	return padWithZeros(plaintext, (len(plaintext)/blockSize+1)*blockSize)
+}
+
+func generateIV(length int) ([]byte, error) {
+	iv := make([]byte, length)
+	_, err := rand.Read(iv)
+	return iv, err
 }
